@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# bin/compile <build-dir> <cache-dir>
+
+set -e
+
+BUILD_DIR=$1
+CACHE_DIR=$2
+
+BUILDPACK_DIR=`cd $(dirname $0); cd ..; pwd`
+SUPPORT_DIR="$BUILDPACK_DIR/support"
+
+
+
+
+NGINX_DIR="nginx-1.4.1"
+NGINX_FILENAME="$NGINX_DIR.tar.gz"
+NGINX_URL="http://nginx.org/download/$NGINX_FILENAME"
+
+mkdir -p $BUILD_DIR $CACHE_DIR
+
+function progress() {
+    echo "-----> $1"
+}
+
+function indent() {
+  c='s/^/       /'
+  case $(uname) in
+    Darwin) sed -l "$c";;
+    *)      sed -u "$c";;
+  esac
+}
+
+# Download and compile Nginx
+cd $CACHE_DIR
+
+progress "Downloading Nginx Sources"
+curl $NGINX_URL -o $NGINX_FILENAME
+
+progress "Extracting Nginx Sources"
+tar -xzf $NGINX_FILENAME
+rm $NGINX_FILENAME
+
+cd $NGINX_DIR
+progress "Configuring"
+./configure --prefix=${BUILD_DIR}/nginx 2>&1 | indent
+
+progress "Compiling"
+make 2>&1 | indent
+
+progress "Installing"
+make install 2>&1 | indent
+
+progress "Creating Boot Script"
+
+NGINX_CONF_SOURCE_FILE="$BUILD_DIR/conf/nginx.conf.erb"
+NGINX_CONF_DEST_FILE="$BUILD_DIR/nginx/conf/nginx.conf.erb"
+
+cp "$NGINX_CONF_SOURCE_FILE" "$NGINX_CONF_DEST_FILE"
+cd $BUILD_DIR
+cat >>boot.sh <<EOF
+#!/usr/bin/env bash
+set -e
+set -x
+if [[ -a .buildrc ]]; then
+    source .buildrc
+fi
+erb ~/nginx/conf/nginx.conf.erb > ~/nginx/conf/nginx.conf
+touch ~/nginx/logs/access.log ~/nginx/logs/error.log
+echo "Launching Nginx"
+nginx -p ~/nginx
+EOF
+chmod +x boot.sh
