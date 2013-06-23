@@ -1,4 +1,7 @@
-heroku-nginx
-============
+Heroku buildpack: nginx
+=======================
 
 Buildpack
+
+Inspired by:
+
