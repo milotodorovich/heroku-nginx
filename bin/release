@@ -4,7 +4,7 @@
 cat <<EOF
 ---
 config_vars:
-  PATH: ${HOME}/nginx/sbin:/usr/local/bin:/usr/bin:/bin
+  PATH: $1/nginx/sbin:/usr/local/bin:/usr/bin:/bin
 default_process_types:
   web: ./boot.sh
 EOF
